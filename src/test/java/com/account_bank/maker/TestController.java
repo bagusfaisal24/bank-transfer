@@ -30,6 +30,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
+
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = ApplicationTest.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -37,6 +38,7 @@ import static org.junit.Assert.assertEquals;
         @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:sql/cleandata.sql"),
         @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:sql/account.sql"),
         @Sql(executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD, scripts = "classpath:sql/portfolio.sql"),
+        @Sql(executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD, scripts = "classpath:sql/cleandata.sql"),
 })
 public class TestController {
 
@@ -46,6 +48,7 @@ public class TestController {
 
     @Autowired
     private TestRestTemplate testRestTemplate;
+
     private static final ObjectMapper mapper = new ObjectMapper();
 
 
@@ -55,7 +58,7 @@ public class TestController {
         ResponseEntity<String> result = testRestTemplate.getForEntity(account, String.class);
         List<AccountBank> list = mapper.readValue(result.getBody(), javaType);
         assertEquals(HttpStatus.OK, result.getStatusCode());
-        assertEquals(2, list.size());
+        assertEquals(3, list.size());
     }
 
     @Test
@@ -126,6 +129,37 @@ public class TestController {
         assertEquals(HttpStatus.NOT_FOUND, result.getStatusCode());
         assertEquals("Destination account data : Not Found", response.getMessage());
     }
+
+    @Test
+    public void test6ReturnTooManyRequestsWhenRateLimitExceeded() throws Exception {
+        for (int i=0; i<6; i++){
+            TransactionForm form = TransactionForm.builder()
+                    .amount(1000000d)
+                    .destinationAccount("111222")
+                    .sourceAccount("112233")
+                    .transactionType(TransactionType.SINGLE)
+                    .build();
+            HttpEntity<String> request = RequestHandler.createRequest(form);
+            ResponseEntity<String> result = testRestTemplate.postForEntity(maker, request, String.class);
+            Response response = mapper.readValue(result.getBody(), Response.class);
+            assertEquals(HttpStatus.CREATED, result.getStatusCode());
+            assertEquals("Success create payment", response.getMessage());
+        }
+
+        TransactionForm form = TransactionForm.builder()
+                .amount(1000000d)
+                .destinationAccount("111222")
+                .sourceAccount("112233")
+                .transactionType(TransactionType.SINGLE)
+                .build();
+        HttpEntity<String> request = RequestHandler.createRequest(form);
+        ResponseEntity<String> result = testRestTemplate.postForEntity(maker, request, String.class);
+        Response response = mapper.readValue(result.getBody(), Response.class);
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, result.getStatusCode());
+        assertEquals("Rate limit exceeded", response.getMessage());
+    }
+
+
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
