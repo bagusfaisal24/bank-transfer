@@ -5,7 +5,6 @@ import com.account_bank.config.ResponseMessage;
 import com.account_bank.config.ResponseUtil;
 import com.account_bank.form.BulkForm;
 import com.account_bank.form.TransactionForm;
-import com.account_bank.model.Payment;
 import com.account_bank.service.BulkImportSvc;
 import com.account_bank.service.MakerSvc;
 import io.github.bucket4j.Bucket;

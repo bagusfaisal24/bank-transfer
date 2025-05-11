@@ -17,14 +17,15 @@ import org.junit.runners.MethodSorters;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlGroup;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.LinkedMultiValueMap;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -78,7 +79,18 @@ public class TestController {
 
     @Test
     public void test2OneToManyTransfer() throws JsonProcessingException {
-
+        String apiUrl = String.format("%s/%s", maker, "import-bulk");
+        LinkedMultiValueMap<String, Object> parameters = new LinkedMultiValueMap<>();
+        final String testFilePath = "./data/data-bulk.xlsx";
+        Path path = Paths.get(testFilePath);
+        parameters.add("file", new FileSystemResource(path));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        HttpEntity<LinkedMultiValueMap<String, Object>> entity = new HttpEntity<>(parameters, headers);
+        ResponseEntity<String> result = testRestTemplate.exchange(apiUrl, HttpMethod.POST, entity, String.class);
+        Response response = mapper.readValue(result.getBody(), Response.class);
+        assertEquals(HttpStatus.CREATED, result.getStatusCode());
+        assertEquals("Success create bulk payment", response.getMessage());
     }
 
     @Test
