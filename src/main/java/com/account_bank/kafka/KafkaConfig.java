@@ -27,8 +27,6 @@ public class KafkaConfig {
     @Bean
     public NewTopic testTopic() {
         return TopicBuilder.name(TopicConstant.PAYMENT)
-                .partitions(4)
-                .replicas(1)
                 .build();
     }
 }
